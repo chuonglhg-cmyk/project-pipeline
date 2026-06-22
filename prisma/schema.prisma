@@ -1,0 +1,74 @@
+// Prisma schema for Project/Customer Pipeline Management
+// Database: SQLite (file-based, easy to run locally)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------
+// PROJECT
+// Represents one company/project moving through the sales pipeline.
+// ----------------------------------------------------------------------
+model Project {
+  id        String   @id @default(cuid())
+
+  companyName String  // Tên công ty
+  projectName String  // Tên dự án
+
+  // Trạng thái dự án: "New" | "Đã demo" | "Đã gửi báo giá" | "Đã gửi hợp đồng" | "Ký hợp đồng" | "End"
+  status     String   @default("New")
+
+  // Bước kế tiếp - tự động map theo status, nhưng có thể chỉnh tay
+  nextStep   String?  // "Demo" | "Gửi báo giá" | "Gửi hợp đồng" | "Ký hợp đồng" | "End" | null
+
+  firstContactDate DateTime  // Thời gian liên hệ lần đầu
+  contractSignedAt DateTime? // Thời gian ký hợp đồng (chỉ có khi đã ký)
+
+  createdAt DateTime @default(now()) // Ngày tạo dự án
+  updatedAt DateTime @updatedAt       // Ngày cập nhật gần nhất
+
+  contacts Contact[]
+  notes    Note[]
+}
+
+// ----------------------------------------------------------------------
+// CONTACT
+// Each project/company can have multiple contact persons.
+// ----------------------------------------------------------------------
+model Contact {
+  id        String  @id @default(cuid())
+
+  name      String  // Tên người liên hệ
+  phone     String? // Số điện thoại
+  email     String? // Email
+  position  String? // Chức vụ
+  isPrimary Boolean @default(false) // Đánh dấu người liên hệ chính
+  note      String? // Ghi chú riêng cho người liên hệ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// NOTE
+// Each project can have multiple notes (timeline / history log).
+// ----------------------------------------------------------------------
+model Note {
+  id        String   @id @default(cuid())
+
+  content   String   // Nội dung ghi chú
+
+  createdAt DateTime @default(now()) // Thời gian tạo ghi chú
+  updatedAt DateTime @updatedAt       // Ngày cập nhật ghi chú (nếu có chỉnh sửa)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
