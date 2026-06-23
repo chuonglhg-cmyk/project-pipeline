@@ -35,6 +35,7 @@ const SORT_OPTIONS = [
 export default function ProjectsListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -58,21 +59,83 @@ export default function ProjectsListPage() {
   }, [search, status, sortBy, sortDir]);
 
   useEffect(() => {
-    const t = setTimeout(load, 250); // debounce search
+    const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
+
+  // Xuất báo cáo Excel — truyền thêm filter đang dùng
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (status) params.set("status", status);
+
+      const res = await fetch(`/api/export?${params.toString()}`);
+      if (!res.ok) throw new Error("Export thất bại");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `bao-cao-du-an-${dateStr}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Có lỗi khi xuất báo cáo. Vui lòng thử lại.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-800">Danh sách dự án</h1>
-        <Link
-          href="/projects/new"
-          className="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-md hover:bg-slate-700"
-        >
-          + Thêm dự án
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            disabled={exporting || loading}
+            className="border border-slate-300 text-slate-700 text-sm px-3 py-1.5 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {exporting ? (
+              <>
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+                Đang xuất...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Xuất Excel
+              </>
+            )}
+          </button>
+          <Link
+            href="/projects/new"
+            className="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-md hover:bg-slate-700"
+          >
+            + Thêm dự án
+          </Link>
+        </div>
       </div>
+
+      {/* Export info banner khi đang filter */}
+      {(search || status) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2 text-sm text-blue-700 flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          Nút "Xuất Excel" sẽ xuất theo bộ lọc hiện tại
+          {status && <span className="font-medium">· Trạng thái: {status}</span>}
+          {search && <span className="font-medium">· Tìm kiếm: "{search}"</span>}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 flex flex-wrap gap-3 items-end">
@@ -97,9 +160,7 @@ export default function ProjectsListPage() {
           >
             <option value="">Tất cả</option>
             {STATUS_LIST.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
@@ -112,9 +173,7 @@ export default function ProjectsListPage() {
             className="border border-slate-300 rounded-md px-3 py-1.5 text-sm"
           >
             {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </div>
@@ -130,6 +189,11 @@ export default function ProjectsListPage() {
             <option value="asc">Tăng dần</option>
           </select>
         </div>
+      </div>
+
+      {/* Summary row */}
+      <div className="text-sm text-slate-500">
+        {loading ? "Đang tải..." : `${projects.length} dự án`}
       </div>
 
       {/* Table */}
@@ -152,54 +216,31 @@ export default function ProjectsListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className="px-3 py-6 text-center text-slate-400">
-                  Đang tải...
-                </td>
+                <td colSpan={10} className="px-3 py-6 text-center text-slate-400">Đang tải...</td>
               </tr>
             ) : projects.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-6 text-center text-slate-400">
-                  Không có dự án nào phù hợp.
-                </td>
+                <td colSpan={10} className="px-3 py-6 text-center text-slate-400">Không có dự án nào phù hợp.</td>
               </tr>
             ) : (
               projects.map((p) => {
-                const primary =
-                  p.contacts.find((c) => c.isPrimary) || p.contacts[0];
+                const primary = p.contacts.find((c) => c.isPrimary) || p.contacts[0];
                 return (
                   <tr
                     key={p.id}
                     className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
                     onClick={() => (window.location.href = `/projects/${p.id}`)}
                   >
-                    <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">
-                      {p.companyName}
-                    </td>
+                    <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{p.companyName}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{p.projectName}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge status={p.status} />
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-slate-600">
-                      {p.nextStep || "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {primary ? primary.name : "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {primary?.phone || "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {primary?.email || "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDate(p.firstContactDate)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDate(p.contractSignedAt)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-slate-500">
-                      {formatDateTime(p.updatedAt)}
-                    </td>
+                    <td className="px-3 py-2"><StatusBadge status={p.status} /></td>
+                    <td className="px-3 py-2 whitespace-nowrap text-slate-600">{p.nextStep || "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{primary ? primary.name : "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{primary?.phone || "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{primary?.email || "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatDate(p.firstContactDate)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatDate(p.contractSignedAt)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-slate-500">{formatDateTime(p.updatedAt)}</td>
                   </tr>
                 );
               })

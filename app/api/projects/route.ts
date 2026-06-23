@@ -18,21 +18,18 @@ export async function GET(req: NextRequest) {
   const orderField = allowedSort[sortBy] || "updatedAt";
 
   const where: any = {};
-
-  if (status) {
-    where.status = status;
-  }
+  if (status) where.status = status;
 
   if (search) {
     where.OR = [
-      { companyName: { contains: search } },
-      { projectName: { contains: search } },
+      { companyName: { contains: search, mode: "insensitive" } },
+      { projectName: { contains: search, mode: "insensitive" } },
       {
         contacts: {
           some: {
             OR: [
-              { name: { contains: search } },
-              { email: { contains: search } },
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
               { phone: { contains: search } },
             ],
           },
@@ -50,18 +47,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(projects);
 }
 
-// POST /api/projects - create new project
+// POST /api/projects
 export async function POST(req: NextRequest) {
   const body = await req.json();
-
-  const {
-    companyName,
-    projectName,
-    status = "New",
-    nextStep,
-    firstContactDate,
-    contractSignedAt,
-  } = body;
+  const { companyName, projectName, status = "New", nextStep, firstContactDate, contractSignedAt } = body;
 
   if (!companyName || !projectName || !firstContactDate) {
     return NextResponse.json(

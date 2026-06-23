@@ -4,3 +4,4 @@ builder = "nixpacks"
 [deploy]
 startCommand = "next start"
 restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

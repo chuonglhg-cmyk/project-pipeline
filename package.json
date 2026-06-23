@@ -4,21 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
+    "seed": "tsx prisma/seed.ts",
+    "migrate:dev": "prisma migrate dev"
+  },
+  "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "exceljs": "^4.4.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
     "@types/node": "^20",
