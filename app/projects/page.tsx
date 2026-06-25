@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { STATUS_LIST } from "@/lib/status";
+import { useStatuses } from "@/lib/useStatuses";
 
 type Contact = {
   id: string;
@@ -36,6 +36,7 @@ export default function ProjectsListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const { statuses } = useStatuses();
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -159,8 +160,8 @@ export default function ProjectsListPage() {
             className="border border-slate-300 rounded-md px-3 py-1.5 text-sm"
           >
             <option value="">Tất cả</option>
-            {STATUS_LIST.map((s) => (
-              <option key={s} value={s}>{s}</option>
+            {statuses.map((s) => (
+              <option key={s.name} value={s.name}>{s.name}</option>
             ))}
           </select>
         </div>

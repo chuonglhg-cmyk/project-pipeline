@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { STATUS_LIST, getSuggestedNextStep } from "@/lib/status";
+import { useStatuses } from "@/lib/useStatuses";
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const { statuses, getNextStep } = useStatuses();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -13,28 +14,27 @@ export default function NewProjectPage() {
     companyName: "",
     projectName: "",
     status: "New",
-    nextStep: getSuggestedNextStep("New") || "",
+    nextStep: "Demo",
     firstContactDate: new Date().toISOString().slice(0, 10),
     contractSignedAt: "",
   });
 
+  // Khi statuses load xong, cập nhật nextStep theo status hiện tại
   function handleStatusChange(status: string) {
     setForm((f) => ({
       ...f,
       status,
-      nextStep: getSuggestedNextStep(status) || "",
+      nextStep: getNextStep(status) || "",
     }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
     if (!form.companyName.trim() || !form.projectName.trim()) {
       setError("Vui lòng nhập tên công ty và tên dự án.");
       return;
     }
-
     setSubmitting(true);
     const res = await fetch("/api/projects", {
       method: "POST",
@@ -44,14 +44,12 @@ export default function NewProjectPage() {
         contractSignedAt: form.contractSignedAt || null,
       }),
     });
-
     if (!res.ok) {
       const data = await res.json();
       setError(data.error || "Có lỗi xảy ra.");
       setSubmitting(false);
       return;
     }
-
     const created = await res.json();
     router.push(`/projects/${created.id}`);
   }
@@ -79,7 +77,6 @@ export default function NewProjectPage() {
               placeholder="VD: Công ty A"
             />
           </Field>
-
           <Field label="Tên dự án *">
             <input
               value={form.projectName}
@@ -97,14 +94,11 @@ export default function NewProjectPage() {
               onChange={(e) => handleStatusChange(e.target.value)}
               className="input"
             >
-              {STATUS_LIST.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+              {statuses.map((s) => (
+                <option key={s.name} value={s.name}>{s.name}</option>
               ))}
             </select>
           </Field>
-
           <Field label="Bước kế tiếp (tự động, có thể chỉnh tay)">
             <input
               value={form.nextStep}
@@ -120,20 +114,15 @@ export default function NewProjectPage() {
             <input
               type="date"
               value={form.firstContactDate}
-              onChange={(e) =>
-                setForm({ ...form, firstContactDate: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, firstContactDate: e.target.value })}
               className="input"
             />
           </Field>
-
           <Field label="Thời gian ký hợp đồng (nếu có)">
             <input
               type="date"
               value={form.contractSignedAt}
-              onChange={(e) =>
-                setForm({ ...form, contractSignedAt: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, contractSignedAt: e.target.value })}
               className="input"
             />
           </Field>

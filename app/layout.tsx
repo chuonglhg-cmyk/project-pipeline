@@ -35,6 +35,12 @@ export default function RootLayout({
                     Danh sách dự án
                   </Link>
                   <Link
+                    href="/settings"
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    ⚙️ Cài đặt
+                  </Link>
+                  <Link
                     href="/projects/new"
                     className="bg-slate-800 text-white px-3 py-1.5 rounded-md hover:bg-slate-700"
                   >

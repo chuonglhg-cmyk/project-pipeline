@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate, formatDateTime, toDateInputValue } from "@/lib/format";
-import { STATUS_LIST, getSuggestedNextStep, isContractSignedStatus } from "@/lib/status";
+import { useStatuses } from "@/lib/useStatuses";
 
 type Contact = {
   id: string;
@@ -125,6 +125,7 @@ function ProjectInfoCard({
   project: Project;
   onPatch: (data: any) => Promise<void>;
 }) {
+  const { statuses, getNextStep, isContractSigned } = useStatuses();
   const [editing, setEditing] = useState(false);
   const [companyName, setCompanyName] = useState(project.companyName);
   const [projectName, setProjectName] = useState(project.projectName);
@@ -145,19 +146,15 @@ function ProjectInfoCard({
   }, [project]);
 
   async function handleStatusChange(status: string) {
-    // Auto-update next step according to the status flow.
-    const suggested = getSuggestedNextStep(status) || "";
+    const suggested = getNextStep(status) || "";
     setNextStep(suggested);
-
     const data: any = { status, nextStep: suggested };
 
-    // Gợi ý nhập thời gian ký hợp đồng khi chuyển sang "Ký hợp đồng"
-    if (isContractSignedStatus(status) && !contractSignedAt) {
+    if (isContractSigned(status) && !contractSignedAt) {
       const today = toDateInputValue(new Date());
       setContractSignedAt(today);
       data.contractSignedAt = today;
     }
-
     await onPatch(data);
   }
 
@@ -235,9 +232,9 @@ function ProjectInfoCard({
             value={project.status}
             onChange={(e) => handleStatusChange(e.target.value)}
           >
-            {STATUS_LIST.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {statuses.map((s) => (
+              <option key={s.name} value={s.name}>
+                {s.name}
               </option>
             ))}
           </select>
