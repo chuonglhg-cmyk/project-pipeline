@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "next start"
+startCommand = "npx prisma migrate deploy && next start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
