@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate, formatDateTime, toDateInputValue } from "@/lib/format";
 import { useStatuses } from "@/lib/useStatuses";
+import type { StatusItem } from "@/lib/status";
 
 type Contact = {
   id: string;
@@ -42,6 +43,7 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const { statuses, getColor } = useStatuses();
 
   const load = useCallback(() => {
     fetch(`/api/projects/${params.id}`)
@@ -92,7 +94,7 @@ export default function ProjectDetailPage() {
             {project.companyName} — {project.projectName}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
-            <StatusBadge status={project.status} />
+            <StatusBadge status={project.status} color={getColor(project.status)} />
             <span>·</span>
             <span>Bước kế tiếp: {project.nextStep || "—"}</span>
           </div>
@@ -105,7 +107,7 @@ export default function ProjectDetailPage() {
         </button>
       </div>
 
-      <ProjectInfoCard project={project} onPatch={patchProject} />
+      <ProjectInfoCard project={project} onPatch={patchProject} statuses={statuses} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <ContactsCard project={project} reload={load} />
@@ -121,11 +123,13 @@ export default function ProjectDetailPage() {
 function ProjectInfoCard({
   project,
   onPatch,
+  statuses,
 }: {
   project: Project;
   onPatch: (data: any) => Promise<void>;
+  statuses: StatusItem[];
 }) {
-  const { statuses, getNextStep, isContractSigned } = useStatuses();
+  const { getNextStep, isContractSigned } = useStatuses();
   const [editing, setEditing] = useState(false);
   const [companyName, setCompanyName] = useState(project.companyName);
   const [projectName, setProjectName] = useState(project.projectName);

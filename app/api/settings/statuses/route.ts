@@ -6,45 +6,51 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_STATUSES } from "@/lib/status";
 
 // GET /api/settings/statuses
-// Trả về danh sách trạng thái đã cấu hình.
-// Nếu chưa có trong DB (lần đầu), tự động seed từ DEFAULT_STATUSES.
 export async function GET() {
-  let statuses = await prisma.statusConfig.findMany({
-    orderBy: { order: "asc" },
-  });
-
-  // Lần đầu chưa có → tự seed mặc định
-  if (statuses.length === 0) {
-    await prisma.statusConfig.createMany({
-      data: DEFAULT_STATUSES.map((s) => ({
-        name: s.name,
-        nextStep: s.nextStep,
-        color: s.color,
-        order: s.order,
-        isContractSigned: s.isContractSigned,
-      })),
-      skipDuplicates: true,
+  try {
+    let statuses = await prisma.statusConfig.findMany({
+      orderBy: { order: "asc" },
     });
-    statuses = await prisma.statusConfig.findMany({ orderBy: { order: "asc" } });
-  }
 
-  return NextResponse.json(statuses);
+    // Lần đầu chưa có → seed mặc định
+    if (statuses.length === 0) {
+      await prisma.statusConfig.createMany({
+        data: DEFAULT_STATUSES.map((s) => ({
+          name: s.name,
+          nextStep: s.nextStep ?? null,
+          color: s.color,
+          order: s.order,
+          isContractSigned: s.isContractSigned,
+        })),
+        skipDuplicates: true,
+      });
+      statuses = await prisma.statusConfig.findMany({ orderBy: { order: "asc" } });
+    }
+
+    return NextResponse.json(statuses);
+  } catch (err: any) {
+    console.error("GET /api/settings/statuses error:", err);
+    // Trả về mặc định nếu bảng chưa tạo (chưa migrate)
+    return NextResponse.json(
+      DEFAULT_STATUSES.map((s, i) => ({ ...s, id: `default-${i}`, createdAt: new Date(), updatedAt: new Date() }))
+    );
+  }
 }
 
-// POST /api/settings/statuses - tạo trạng thái mới
+// POST /api/settings/statuses
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { name, nextStep, color, order, isContractSigned } = body;
-
-  if (!name || !name.trim()) {
-    return NextResponse.json({ error: "Tên trạng thái không được để trống." }, { status: 400 });
-  }
-
-  // Lấy order lớn nhất hiện tại nếu không truyền
-  const maxOrder = await prisma.statusConfig.aggregate({ _max: { order: true } });
-  const newOrder = order ?? (maxOrder._max.order ?? 0) + 1;
-
   try {
+    const body = await req.json();
+    const { name, nextStep, color, order, isContractSigned } = body;
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: "Tên trạng thái không được để trống." }, { status: 400 });
+    }
+
+    // Lấy order lớn nhất
+    const maxOrder = await prisma.statusConfig.aggregate({ _max: { order: true } });
+    const newOrder = order !== undefined ? order : (maxOrder._max.order ?? -1) + 1;
+
     const status = await prisma.statusConfig.create({
       data: {
         name: name.trim(),
@@ -54,11 +60,13 @@ export async function POST(req: NextRequest) {
         isContractSigned: !!isContractSigned,
       },
     });
+
     return NextResponse.json(status, { status: 201 });
   } catch (e: any) {
+    console.error("POST /api/settings/statuses error:", e);
     if (e.code === "P2002") {
-      return NextResponse.json({ error: "Tên trạng thái đã tồn tại." }, { status: 409 });
+      return NextResponse.json({ error: "Tên trạng thái này đã tồn tại, vui lòng chọn tên khác." }, { status: 409 });
     }
-    throw e;
+    return NextResponse.json({ error: `Lỗi server: ${e.message}` }, { status: 500 });
   }
 }

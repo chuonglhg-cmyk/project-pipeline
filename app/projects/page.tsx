@@ -234,7 +234,7 @@ export default function ProjectsListPage() {
                   >
                     <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{p.companyName}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{p.projectName}</td>
-                    <td className="px-3 py-2"><StatusBadge status={p.status} /></td>
+                    <td className="px-3 py-2"><StatusBadge status={p.status} color={statuses.find(s => s.name === p.status)?.color} /></td>
                     <td className="px-3 py-2 whitespace-nowrap text-slate-600">{p.nextStep || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{primary ? primary.name : "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{primary?.phone || "—"}</td>
