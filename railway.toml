@@ -1,7 +1,10 @@
 [build]
 builder = "nixpacks"
 
+[build.nixpacksConfig]
+npmInstallCmd = "npm install --legacy-peer-deps"
+
 [deploy]
-startCommand = "next start"
+startCommand = "prisma migrate deploy && next start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
