@@ -8,19 +8,26 @@
     "start": "prisma migrate deploy && next start",
     "lint": "next lint",
     "seed": "tsx prisma/seed.ts",
+    "create-admin": "tsx prisma/create-admin.ts",
     "migrate:dev": "prisma migrate dev"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.20.0",
+    "bcryptjs": "^2.4.3",
     "exceljs": "^4.4.0",
     "next": "14.2.35",
+    "next-auth": "^4.24.11",
+    "nodemailer": "^6.9.16",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^6.4.17",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
