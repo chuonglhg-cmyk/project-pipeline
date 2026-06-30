@@ -1,5 +1,9 @@
-// Script tạo tài khoản admin đầu tiên
-// Chạy: tsx prisma/create-admin.ts --email admin@example.com --password yourpassword
+// Script tạo tài khoản admin.
+// Có 2 cách chạy:
+// 1) Qua biến môi trường (dùng cho Railway, tự chạy lúc start, không cần Console):
+//    ADMIN_EMAIL=admin@gmail.com ADMIN_PASSWORD=MatKhau123 ADMIN_NAME=Admin tsx prisma/create-admin.ts
+// 2) Qua tham số dòng lệnh (chạy thủ công ở local hoặc Console):
+//    tsx prisma/create-admin.ts --email admin@example.com --password yourpassword --name "Admin"
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -12,44 +16,51 @@ async function main() {
   const passIdx = args.indexOf("--password");
   const nameIdx = args.indexOf("--name");
 
-  const email = emailIdx !== -1 ? args[emailIdx + 1] : null;
-  const password = passIdx !== -1 ? args[passIdx + 1] : null;
-  const name = nameIdx !== -1 ? args[nameIdx + 1] : "Admin";
+  // Ưu tiên tham số dòng lệnh, fallback về biến môi trường
+  const email = (emailIdx !== -1 ? args[emailIdx + 1] : null) || process.env.ADMIN_EMAIL || null;
+  const password = (passIdx !== -1 ? args[passIdx + 1] : null) || process.env.ADMIN_PASSWORD || null;
+  const name = (nameIdx !== -1 ? args[nameIdx + 1] : null) || process.env.ADMIN_NAME || "Admin";
 
   if (!email || !password) {
-    console.error("Usage: tsx prisma/create-admin.ts --email <email> --password <password> [--name <name>]");
-    process.exit(1);
+    console.log("ℹ️  Bỏ qua tạo admin: chưa cấu hình ADMIN_EMAIL / ADMIN_PASSWORD.");
+    return; // Không exit(1) để không làm fail quá trình start nếu không cấu hình
   }
 
   if (password.length < 8) {
-    console.error("Password phải có ít nhất 8 ký tự.");
-    process.exit(1);
+    console.error("⚠️  ADMIN_PASSWORD phải có ít nhất 8 ký tự. Bỏ qua tạo admin.");
+    return;
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+  if (existing && existing.password) {
+    console.log(`ℹ️  Tài khoản admin "${normalizedEmail}" đã tồn tại và đã có mật khẩu. Bỏ qua.`);
+    return;
+  }
+
+  const hashed = await bcrypt.hash(password, 12);
+
   if (existing) {
-    // Cập nhật thành admin nếu đã tồn tại
-    const hashed = await bcrypt.hash(password, 12);
     await prisma.user.update({
-      where: { email },
+      where: { email: normalizedEmail },
       data: { password: hashed, role: "admin", name, emailVerified: new Date() },
     });
-    console.log(`✅ Đã cập nhật tài khoản admin: ${email}`);
+    console.log(`✅ Đã cập nhật tài khoản admin: ${normalizedEmail}`);
   } else {
-    const hashed = await bcrypt.hash(password, 12);
     await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashed,
         name,
         role: "admin",
         emailVerified: new Date(),
       },
     });
-    console.log(`✅ Đã tạo tài khoản admin: ${email}`);
+    console.log(`✅ Đã tạo tài khoản admin: ${normalizedEmail}`);
   }
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
+  .catch((e) => { console.error("Lỗi tạo admin:", e); })
   .finally(() => prisma.$disconnect());
